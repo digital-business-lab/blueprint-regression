@@ -1,12 +1,13 @@
 """ 
 Not implemented yet
 """
-import pandas as pd
+import torch
 import chardet
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
-from Config import ConfigPaths, ConfigYAML
+from src.Config import ConfigPaths, ConfigYAML
 
 
 class Dataset(ConfigYAML):
@@ -34,18 +35,18 @@ class Dataset(ConfigYAML):
             return X_train, X_val, X_test, y_train, y_val, y_test
         
     def prepare_dataloaders(self, X: pd.DataFrame, y: pd.DataFrame, shuffle: bool):
-        """
-        Not sure if we should implement
-        """
+        """Not implemented yet"""
+        X = torch.tensor(X.values, dtype=torch.float32)
+        y = torch.tensor(y.values, dtype=torch.float32)
         dataset = TensorDataset(X, y)
-        return DataLoader(dataset, self.config_data["Model"]["batch_size"], shuffle)
+        return DataLoader(dataset, self.config_data["modelParams"]["batch_size"], shuffle, drop_last=True)
 
     #----------Private Methods----------#
     def __get_encoding(self, file_path: str) -> str:
         """Automatically gets right encoding"""
         with open(file_path, 'rb') as f:
             result = chardet.detect(f.read())
-
+ 
         return result["encoding"]
 
 

@@ -5,11 +5,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from src.Config import ConfigYAML, ConfigPaths
 
-class Model(nn.Module):
+
+class Model(nn.Module, ConfigYAML):
     """Not implemented yet"""
     def __init__(self, input_size: int, hidden_size: int, output_size: int =1, dropout_rate: float =0.3):
-        super().__init__()
+        ConfigYAML.__init__(self)
+        nn.Module.__init__(self)
 
         self.layer1 = nn.Linear(input_size, hidden_size)
         self.bn1 = nn.BatchNorm1d(hidden_size)
@@ -45,10 +48,11 @@ class Model(nn.Module):
         x = self.layer5(x)
         return x
     
-    def train_model(self, train_loader, val_loader, epochs: int, lr: float):
+    def train_model(self, train_loader, val_loader) -> None:
         """Not implemented yet"""
         criterion = nn.MSELoss()
-        optimizer = optim.Adam(self.parameters(), lr=lr)
+        optimizer = optim.Adam(self.parameters(), lr=self.config_data["modelParams"]["lr"])
+        epochs = self.config_data["modelParams"]["epochs"]
 
         for epoch in range(epochs):
             self.train()
@@ -71,7 +75,12 @@ class Model(nn.Module):
             val_loss = self.evaluate(val_loader=val_loader, criterion=criterion)
             print(f"Validation Loss after epoch {epoch+1}: {val_loss:.4f}")
 
-    def evaluate(self, val_loader, criterion):
+        # Save model
+        torch.save(
+            self.state_dict(), 
+            f"{ConfigPaths().folder_model()}/{str(self.config_data["Dataset"]["name"]).split(".")[0]}.pth")
+
+    def evaluate(self, val_loader, criterion =nn.MSELoss()):
         """Not implemented yet"""
         self.eval()
         val_loss = 0.0
@@ -93,7 +102,6 @@ class Model(nn.Module):
 
         return predictions
                 
-
 
 if __name__ == "__main__":
     ...

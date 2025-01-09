@@ -1,13 +1,18 @@
 Dataset:
-  name: titanic.csv
-  target_column: survived
+  name: diabetes.csv
+  target_column: Outcome
+  train_size: 0.7
 
-Model:
-  input_size: 11
+model:
+  modelName: default_model.pth #Uses default model; If None it trains a custom model
+  modelMode: train # train, evaluate, predict, train_predict
+
+modelParams:
+  input_size: 8 #Number of features -> TODO: Automate
   hidden_size: 128
-  output_size: 1
-  dropout_rate: 0.3
+  output_size: 1 #Always 1 for regression
   epochs: 10
-  lr: 0.0001
   batch_size: 8
+  lr: 0.0001
+  dropout_rate: 0.3
   criterion: None
