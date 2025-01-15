@@ -18,7 +18,7 @@ modelParams:
   input_size: 12
   hidden_size: 64
   output_size: 1
-  epochs: 200
+  epochs: 20
   batch_size: 8
   lr: 0.0001
   dropout_rate: 0.3

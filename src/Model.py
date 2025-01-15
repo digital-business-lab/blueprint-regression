@@ -61,14 +61,18 @@ class Model(nn.Module, ConfigYAML):
 
             for batch in train_loader:
                 inputs, targets = batch
-
                 optimizer.zero_grad()
                 outputs = self(inputs)
+
+                #Remove extra dimension
+                outputs = outputs.squeeze()
+    
                 loss = criterion(outputs, targets)
                 loss.backward()
                 optimizer.step()
 
                 running_loss += loss.item()
+
 
             print(f"Epoch [{epoch+1}/{epochs}], Loss: {running_loss / len(train_loader):.4f}")
 
@@ -94,6 +98,9 @@ class Model(nn.Module, ConfigYAML):
             for batch in val_loader:
                 inputs, targets = batch
                 outputs = self(inputs)
+                
+                #Remove extra dimension
+                outputs = outputs.squeeze()
 
                 # Calculate loss
                 loss = criterion(outputs, targets)

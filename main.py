@@ -96,4 +96,4 @@ if __name__ == "__main__":
 
     MODE = config.config_data["model"]["modelMode"]
 
-    model_mode_output(model=MODEL, mode=MODE)
+    result = model_mode_output(model=MODEL, mode=MODE)
