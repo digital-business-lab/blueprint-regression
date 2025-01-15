@@ -20,6 +20,15 @@ def load_dataset() -> dict:
         dataset.config_data['Dataset']['train_size']
         )
     
+    # Preprocess features
+    X_train = pd.DataFrame(dataset.preprocess_dataset(X_train, mode="train"))
+    X_val = pd.DataFrame(dataset.preprocess_dataset(X_val, mode="test"))
+    X_test = pd.DataFrame(dataset.preprocess_dataset(X_test, mode="test"))
+
+    # Get final number of features
+    dataset.config_data["modelParams"]["input_size"] = len(X_train.columns)
+    ConfigYAML.write_yaml(dataset.config_data)
+
     dataloaders = {
         "data_train" : dataset.prepare_dataloaders(X_train, y_train, shuffle=True),
         "data_val" : dataset.prepare_dataloaders(X_val, y_val, shuffle=False),

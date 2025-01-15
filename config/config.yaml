@@ -1,17 +1,24 @@
 Dataset:
-  name: diabetes.csv
-  target_column: Outcome
+  name: boston_housing.csv
+  target_column: medv
   train_size: 0.7
-
+Preprocessing:
+  numColumns:
+  - black
+  - age
+  - tax
+  numColsProcessor: mean
+  numColsScale: true
+  catColumns: []
+  catColsProcessor: constant
 model:
-  modelName: default_model.pth #Uses default model; If None it trains a custom model
-  modelMode: train # train, evaluate, predict, train_predict
-
+  modelName: None
+  modelMode: train
 modelParams:
-  input_size: 8 #Number of features -> TODO: Automate
-  hidden_size: 128
-  output_size: 1 #Always 1 for regression
-  epochs: 10
+  input_size: 12
+  hidden_size: 64
+  output_size: 1
+  epochs: 200
   batch_size: 8
   lr: 0.0001
   dropout_rate: 0.3
