@@ -1,17 +1,48 @@
 """ 
-Module Docstring not implemented yet
+This file holds the model.
+File is written in pylint standard.
+
+@author Lukas Graf
 """
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn
+from torch import optim
 
 from src.Config import ConfigYAML, ConfigPaths
 
 
 class Model(nn.Module, ConfigYAML):
-    """Not implemented yet"""
-    def __init__(self, input_size: int, hidden_size: int, output_size: int =1, dropout_rate: float =0.3):
+    """
+    This class defines the model for training / evaluating / predicting
+
+    Attributes:
+    -----------
+        input_size : int
+            -> Number of features the model should expect as input
+        hidden_size : int
+            -> Size of hidden layers
+        output_size : int, optional
+            -> Output of Model. For regression its usually 1
+            -> Default to 1
+        dropout_rate : float, optional
+            -> Percentage of neurans that randomly deactvate during 
+            training (helps against overfitting)
+            -> Defaults to 0.3 (30%)
+
+    Methods:
+    --------
+        forward
+            -> Forward-pass of the model
+        train_model
+            -> Trains the model
+        evaluate
+            -> evaluates the model
+        predict
+            -> Makes predictions
+    """
+    def __init__(self, input_size: int, hidden_size: int,
+                 output_size: int =1, dropout_rate: float =0.3):
         ConfigYAML.__init__(self)
         nn.Module.__init__(self)
 
@@ -33,7 +64,17 @@ class Model(nn.Module, ConfigYAML):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        """Not implemented yet"""
+        """
+        Forward-pass of the model. Should not be used!
+
+        Parameters:
+        -----------
+            x
+
+        Returns:
+        --------
+            x
+        """
         x = self.relu(self.bn1(self.layer1(x)))
         x = self.dropout(x)
 
@@ -48,9 +89,22 @@ class Model(nn.Module, ConfigYAML):
 
         x = self.layer5(x)
         return x
-    
+
     def train_model(self, train_loader, val_loader) -> None:
-        """Trains the model and evaluates it after each epoch"""
+        """
+        Trains and saves the model
+
+        Parameters:
+        -----------
+            train_loader : DataLoader
+                -> Dataloader for training set
+            val_loader : DataLoader
+                -> DataLoader for validation / test set
+
+        Returns:
+        --------
+            None
+        """
         criterion = nn.MSELoss()
         optimizer = optim.Adam(self.parameters(), lr=self.config_data["modelParams"]["lr"])
         epochs = self.config_data["modelParams"]["epochs"]
@@ -66,13 +120,12 @@ class Model(nn.Module, ConfigYAML):
 
                 #Remove extra dimension
                 outputs = outputs.squeeze()
-    
+
                 loss = criterion(outputs, targets)
                 loss.backward()
                 optimizer.step()
 
                 running_loss += loss.item()
-
 
             print(f"Epoch [{epoch+1}/{epochs}], Loss: {running_loss / len(train_loader):.4f}")
 
@@ -82,13 +135,27 @@ class Model(nn.Module, ConfigYAML):
             print(f"Validation R² after epoch {epoch+1}: {r2:.4f}")
 
         # Save model
+        model_name = str(self.config_data['Dataset']['name']).split('.', maxsplit=1)[0]
         torch.save(
             self.state_dict(),
-            f"{ConfigPaths().folder_model()}/{str(self.config_data['Dataset']['name']).split('.')[0]}.pth"
+            f"{ConfigPaths().folder_model()}/{model_name}.pth"
         )
 
-    def evaluate(self, val_loader, criterion=nn.MSELoss()):
-        """Evaluates the model's performance on the validation set and computes R² score"""
+    def evaluate(self, val_loader, criterion=nn.MSELoss()) -> list:
+        """
+        Evaluates the model's performance on the validation set and computes R² score
+
+        Parameters:
+        -----------
+            val_loader : DataLoader
+                -> Loader for validation / test set
+            criterion : optional
+                -> Loss Function
+
+        Returns:
+        --------
+            list
+        """
         self.eval()  # Set model to evaluation mode
         val_loss = 0.0
         all_predictions = []
@@ -98,7 +165,7 @@ class Model(nn.Module, ConfigYAML):
             for batch in val_loader:
                 inputs, targets = batch
                 outputs = self(inputs)
-                
+
                 #Remove extra dimension
                 outputs = outputs.squeeze()
 
@@ -121,25 +188,47 @@ class Model(nn.Module, ConfigYAML):
         r2 = self.__r2_score(all_targets, all_predictions)
 
         return avg_loss, r2
-    
+
     def predict(self, X):
-        """Not implemented yet"""
+        """
+        Makes predictions
+
+        Parameters:
+        -----------
+            X
+                -> Dataset on which predictions should be made
+        """
         self.eval()
         with torch.no_grad():
             predictions = self(X)
 
         return predictions
-    
+
     #---------Private Methods---------#
-    def __r2_score(self, y_true, y_pred):
+    def __r2_score(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
         """
-        Compute the R² (coefficient of determination) score.
+        Compute the R² (coefficient of determination) score
+        Score of -1 worse than random model
+        Score of 0 bad but not as bad as random model
+        Score of 1 perfect
+
+        Parameters:
+        -----------
+            y_true : np.ndarray
+                -> Ground Truth
+            y_pred : np.ndarray
+                -> predicted y values
+
+        Returns:
+        --------
+            float
+                -> R2 score
         """
         ss_total = np.sum((y_true - np.mean(y_true)) ** 2)
         ss_residual = np.sum((y_true - y_pred) ** 2)
-        r2 = 1 - (ss_residual / ss_total)
+        r2: float = 1 - (ss_residual / ss_total)
         return r2
-                
+
 
 if __name__ == "__main__":
     ...
