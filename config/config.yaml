@@ -1,24 +1,33 @@
 Dataset:
-  name: boston_housing.csv
-  target_column: medv
+  name: weatherHistory.csv
+  target_column: Apparent Temperature (C)
   train_size: 0.7
 Preprocessing:
+  dropColumns:
+  - Formatted Date
   numColumns:
-  - black
-  - age
-  - tax
+  - Temperature (C)
+  - Humidity
+  - Wind Speed (km/h)
+  - Wind Bearing (degrees)
+  - Visibility (km)
+  - Loud Cover
+  - Pressure (millibars)
   numColsProcessor: mean
   numColsScale: true
-  catColumns: []
+  catColumns:
+  - Summary
+  - Precip Type
+  - Daily Summary
   catColsProcessor: constant
 model:
-  modelName: None
-  modelMode: train
+  modelName: weatherHistory.pth
+  modelMode: evaluatee
 modelParams:
-  input_size: 12
+  input_size: 249
   hidden_size: 64
   output_size: 1
-  epochs: 20
+  epochs: 5
   batch_size: 8
   lr: 0.0001
   dropout_rate: 0.3

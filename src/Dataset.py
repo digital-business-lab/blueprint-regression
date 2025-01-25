@@ -1,6 +1,8 @@
 """ 
 Not implemented yet
 """
+import scipy.sparse as sp
+
 import torch
 import chardet
 import pandas as pd
@@ -34,8 +36,8 @@ class Dataset(ConfigYAML):
             y = data[target_variable]
             X = data.drop(target_variable, axis=1)
             test_size = 1 - train_size
-            X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size)
-            X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5)
+            X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size, random_state=42)
+            X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
             return X_train, X_val, X_test, y_train, y_val, y_test
         
@@ -43,15 +45,19 @@ class Dataset(ConfigYAML):
         # Validate mode
         if mode not in ["train", "test"]:
             raise ValueError("Mode must be 'train' or 'test'!")
-        
+       
+        # Variables for dropping columns
+        drop_columns: list = self.config_data["Preprocessing"]["dropColumns"]
+        X = X.drop(drop_columns, axis=1)
+    
         # Variables for numerical columns
         cols_imp_num: list = self.config_data["Preprocessing"]["numColumns"]
         strat_imp_num: str = self.config_data["Preprocessing"]["numColsProcessor"]
-        
+      
         # Variables for categorical columns
         cols_imp_cat: list = self.config_data["Preprocessing"]["catColumns"]
         strat_imp_cat: str = self.config_data["Preprocessing"]["catColsProcessor"]
-
+     
         scale_num: bool = self.config_data["Preprocessing"]["numColsScale"]
 
         pipe_preprocessing_num = Pipeline([
@@ -61,7 +67,7 @@ class Dataset(ConfigYAML):
 
         pipe_preprocessing_cat = Pipeline([
                 ("imp_cat", SimpleImputer(strategy=strat_imp_cat)),
-                ("encoder", OneHotEncoder(handle_unknown="ignore"))
+                ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
             ])
 
         # Initialize ColumnTransformer (only on training)

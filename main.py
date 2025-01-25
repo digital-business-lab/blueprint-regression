@@ -19,7 +19,7 @@ def load_dataset() -> dict:
         dataset.config_data['Dataset']['target_column'], 
         dataset.config_data['Dataset']['train_size']
         )
-    
+
     # Preprocess features
     X_train = pd.DataFrame(dataset.preprocess_dataset(X_train, mode="train"))
     X_val = pd.DataFrame(dataset.preprocess_dataset(X_val, mode="test"))
@@ -37,9 +37,32 @@ def load_dataset() -> dict:
 
     return dataloaders
 
-def model_mode_output(model: Model, mode: str, X: pd.DataFrame =None):
+def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
     dataloaders = load_dataset()
+    input_size = Dataset().config_data["modelParams"]["input_size"]
 
+    # Choose model
+    if model_name == "None":
+        model = Model(
+            input_size,
+            config.config_data["modelParams"]["hidden_size"],
+            config.config_data["modelParams"]["output_size"]
+        )
+    else:
+        model = Model(
+            input_size,
+            config.config_data["modelParams"]["hidden_size"],
+            config.config_data["modelParams"]["output_size"]
+        )
+
+        print("Loading model dict state")
+        model.load_state_dict(torch.load(
+            f"{ConfigPaths().folder_model()}/{modelName}",
+            weights_only=True
+            ))
+
+
+    # Choose model mode
     if mode == "train":
         model.train_model(
             train_loader=dataloaders["data_train"],
@@ -48,8 +71,8 @@ def model_mode_output(model: Model, mode: str, X: pd.DataFrame =None):
         results = print("Model trained successfully!")
 
     elif mode == "evaluate":
-        # model.evaluate()
-        ...
+        avg_loss, r2 = model.evaluate(val_loader=dataloaders["data_test"])
+        results = {"avg_loss" : avg_loss, "r2" : r2}
 
     elif mode == "predict":
         X = torch.tensor(X.values, dtype=torch.float32)
@@ -66,7 +89,7 @@ def model_mode_output(model: Model, mode: str, X: pd.DataFrame =None):
 
     else:
         results = ValueError(
-            f"Wrong input! Select 'train', 'predict' or 'train_predict'! Your input was: '{mode}'"
+            "Wrong input! Select 'train', 'evaluate', 'predict' or 'train_predict'!"
             )
         
     return results
@@ -75,25 +98,6 @@ def model_mode_output(model: Model, mode: str, X: pd.DataFrame =None):
 if __name__ == "__main__":
     config = ConfigYAML()
     modelName = config.config_data["model"]["modelName"]
-
-    if modelName == "None":
-        MODEL = Model(
-            config.config_data["modelParams"]["input_size"],
-            config.config_data["modelParams"]["hidden_size"],
-            config.config_data["modelParams"]["output_size"]
-        )
-    else:
-        MODEL = Model(
-            config.config_data["modelParams"]["input_size"],
-            config.config_data["modelParams"]["hidden_size"],
-            config.config_data["modelParams"]["output_size"]
-        )
-
-        print("Loading model dict state")
-        MODEL.load_state_dict(torch.load(
-            f"{ConfigPaths().folder_model()}/{modelName}"
-            ))
-
     MODE = config.config_data["model"]["modelMode"]
-
-    result = model_mode_output(model=MODEL, mode=MODE)
+    result = model_mode_output(model_name=modelName, mode=MODE)
+    print(result)
