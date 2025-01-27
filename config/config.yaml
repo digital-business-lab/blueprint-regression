@@ -21,8 +21,8 @@ Preprocessing:
   - Daily Summary
   catColsProcessor: constant
 model:
-  modelName: weatherHistory.pth
-  modelMode: evaluatee
+  modelName: None
+  modelMode: train
 modelParams:
   input_size: 249
   hidden_size: 64
@@ -31,4 +31,3 @@ modelParams:
   batch_size: 8
   lr: 0.0001
   dropout_rate: 0.3
-  criterion: None

@@ -1,5 +1,11 @@
 """
-Not implemented yet
+This files brings all the components together:
+    1. Loads / Updates Config
+    2. Lodas Dataset into dataframes
+    3. Executes model
+File is written in pylint standard.
+
+@author Lukas Graf
 """
 import torch
 import pandas as pd
@@ -10,12 +16,23 @@ from src.Config import ConfigPaths, ConfigYAML
 
 
 def load_dataset() -> dict:
+    """ 
+    This function loads and preprocesses the given dataset
+        1. Train-Val-Test Split
+        2. Preprocessing
+        3. Creating dataloaders
+
+    Returns
+    -------
+        dict
+            -> DataLoaders for train, val and test
+    """
     dataset = Dataset()
     data = dataset.read_dataset(
         f"{ConfigPaths().folder_data()}/{dataset.config_data['Dataset']['name']}"
         )
     X_train, X_val, X_test, y_train, y_val, y_test = dataset.split_dataset(
-        data, 
+        data,
         dataset.config_data['Dataset']['target_column'], 
         dataset.config_data['Dataset']['train_size']
         )
@@ -38,6 +55,25 @@ def load_dataset() -> dict:
     return dataloaders
 
 def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
+    """ 
+    Loads, trains / evaluates / makes prediction model
+        1. Load a given model or create a new one
+        2. Make training / evaluation / prediction
+
+    Parameters:
+    -----------
+        model_name : str
+            -> Name of the model which should be loaded
+            -> If None, a new one will be created
+        mode : str
+            -> Mode which the model should execute
+            -> "train", "evaluate", "predict", "train_predict"
+        X : pd.DataFrame
+            -> Value for predictions
+    Returns:
+    --------
+        Any
+    """
     dataloaders = load_dataset()
     input_size = Dataset().config_data["modelParams"]["input_size"]
 
@@ -57,7 +93,7 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
 
         print("Loading model dict state")
         model.load_state_dict(torch.load(
-            f"{ConfigPaths().folder_model()}/{modelName}",
+            f"{ConfigPaths().folder_model()}/{model_name}",
             weights_only=True
             ))
 
@@ -91,7 +127,7 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
         results = ValueError(
             "Wrong input! Select 'train', 'evaluate', 'predict' or 'train_predict'!"
             )
-        
+
     return results
 
 
