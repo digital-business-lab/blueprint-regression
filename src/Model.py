@@ -5,6 +5,8 @@ File is written in pylint standard.
 @author Lukas Graf
 """
 import numpy as np
+import mlflow
+from mlflow import pytorch
 import torch
 from torch import nn
 from torch import optim
@@ -109,37 +111,48 @@ class Model(nn.Module, ConfigYAML):
         optimizer = optim.Adam(self.parameters(), lr=self.config_data["modelParams"]["lr"])
         epochs = self.config_data["modelParams"]["epochs"]
 
-        for epoch in range(epochs):
-            self.train()
-            running_loss = 0.0
+        input_example = np.random.randn(1, self.layer1.in_features).astype(np.float32)
+        # Start MLflow experiment
+        with mlflow.start_run():
+            mlflow.log_param("learning_rate", self.config_data["modelParams"]["lr"])
+            mlflow.log_param("epochs", epochs)
+            mlflow.log_param("dropout_rate", self.dropout.p)
 
-            for batch in train_loader:
-                inputs, targets = batch
-                optimizer.zero_grad()
-                outputs = self(inputs)
+            for epoch in range(epochs):
+                self.train()
+                running_loss = 0.0
 
-                #Remove extra dimension
-                outputs = outputs.squeeze()
+                for batch in train_loader:
+                    inputs, targets = batch
+                    optimizer.zero_grad()
+                    outputs = self(inputs)
 
-                loss = criterion(outputs, targets)
-                loss.backward()
-                optimizer.step()
+                    #Remove extra dimension
+                    outputs = outputs.squeeze()
 
-                running_loss += loss.item()
+                    loss = criterion(outputs, targets)
+                    loss.backward()
+                    optimizer.step()
 
-            print(f"Epoch [{epoch+1}/{epochs}], Loss: {running_loss / len(train_loader):.4f}")
+                    running_loss += loss.item()
 
-            # Validation
-            val_loss, r2 = self.evaluate(val_loader=val_loader, criterion=criterion)
-            print(f"Validation Loss after epoch {epoch+1}: {val_loss:.4f}")
-            print(f"Validation R² after epoch {epoch+1}: {r2:.4f}")
+                train_loss = running_loss / len(train_loader)
+                print(f"Epoch [{epoch+1}/{epochs}], Training Loss: {train_loss:.4f}")
+                mlflow.log_metric("training_loss", train_loss, step=epoch + 1)
 
-        # Save model
-        model_name = str(self.config_data['Dataset']['name']).split('.', maxsplit=1)[0]
-        torch.save(
-            self.state_dict(),
-            f"{ConfigPaths().folder_model()}/{model_name}.pth"
-        )
+                # Validation
+                val_loss, r2 = self.evaluate(val_loader=val_loader, criterion=criterion)
+                print(f"Validation Loss after epoch {epoch+1}: {val_loss:.4f}")
+                print(f"Validation R² after epoch {epoch+1}: {r2:.4f}")
+                mlflow.log_metric("validation_loss", val_loss, step=epoch + 1)
+                mlflow.log_metric("validation_r2", r2, step=epoch + 1)
+
+            # Save model
+            model_name = str(self.config_data['Dataset']['name']).split('.', maxsplit=1)[0]
+            model_path = f"{ConfigPaths().folder_model()}/{model_name}.pth"
+            torch.save(self.state_dict(), model_path)
+            mlflow.log_artifact(model_path, artifact_path="models")
+            pytorch.log_model(self, "pytorch-model", input_example=input_example)
 
     def evaluate(self, val_loader, criterion=nn.MSELoss()) -> list:
         """
