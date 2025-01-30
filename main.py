@@ -7,11 +7,14 @@ File is written in pylint standard.
 
 @author Lukas Graf
 """
+from functools import partial
+
+import optuna
 import torch
 import pandas as pd
 
-from src.Model import Model
 from src.Dataset import Dataset
+from src.Model import Model, objective
 from src.Config import ConfigPaths, ConfigYAML
 
 
@@ -56,9 +59,11 @@ def load_dataset() -> dict:
 
 def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
     """ 
-    Loads, trains / evaluates / makes prediction model
+    Loads, trains / evaluates / makes prediction model and performs
+    hyperparameter optimization if train and hypTuning
         1. Load a given model or create a new one
-        2. Make training / evaluation / prediction
+        2. Hyperparameteroptimization
+        3. Make training / evaluation / prediction
 
     Parameters:
     -----------
@@ -76,6 +81,30 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
     """
     dataloaders = load_dataset()
     dataset = Dataset()
+
+    # Hyperparam tuning and updating params for final model
+    hyp_tuning: bool = dataset.config_data["HyperParamTuning"]["hypTuning"]
+    if hyp_tuning and mode=="train":
+        study = optuna.create_study(direction="minimize")
+        study.optimize(
+            partial(
+                objective, 
+                train_loader=dataloaders["data_train"], 
+                val_loader=dataloaders["data_val"]
+                ),
+            n_trials=dataset.config_data["HyperParamTuning"]["hypNumTrials"]
+        )
+
+        best_params = study.best_params
+        dataset.config_data["modelParams"]["hidden_size"] = best_params["hidden_size"]
+        dataset.config_data["modelParams"]["dropout_rate"] = best_params["dropout_rate"]
+        dataset.config_data["modelParams"]["lr"] = best_params["learning_rate"]
+        ConfigYAML.write_yaml(dataset.config_data)
+
+    elif hyp_tuning and mode!="train":
+        raise ValueError(
+            "If you want to do hyperparameter optimization you have to set modelMode to train!"
+            )
 
     # Choose model
     if model_name is None:
@@ -97,14 +126,13 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
             weights_only=True
             ))
 
-
     # Choose model mode
     if mode == "train":
-        model.train_model(
-            train_loader=dataloaders["data_train"],
-            val_loader=dataloaders["data_val"]
-        )
-        results = print("Model trained successfully!")
+        loss, r2 = model.train_model(
+                            train_loader=dataloaders["data_train"],
+                            val_loader=dataloaders["data_val"]
+                        )
+        results = {"loss" : loss, "r2" : r2}
 
     elif mode == "evaluate":
         avg_loss, r2 = model.evaluate(val_loader=dataloaders["data_test"])

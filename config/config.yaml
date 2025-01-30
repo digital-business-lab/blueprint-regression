@@ -35,3 +35,6 @@ Visualization:
   visBool: true
   visFormat: png
   visMaxSteps: 100
+HyperParamTuning:
+  hypTuning: false
+  hypNumTrials: 20

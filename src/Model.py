@@ -45,9 +45,11 @@ class Model(nn.Module, ConfigYAML):
             -> Makes predictions
     """
     def __init__(self, input_size: int, hidden_size: int,
-                 output_size: int =1, dropout_rate: float =0.3):
+                 output_size: int):
         ConfigYAML.__init__(self)
         nn.Module.__init__(self)
+        self.lr = self.config_data["modelParams"]["lr"]
+        self.dropout_rate = self.config_data["modelParams"]["dropout_rate"]
 
         self.layer1 = nn.Linear(input_size, hidden_size)
         self.bn1 = nn.BatchNorm1d(hidden_size)
@@ -63,7 +65,7 @@ class Model(nn.Module, ConfigYAML):
 
         self.layer5 = nn.Linear(hidden_size, output_size)
 
-        self.dropout = nn.Dropout(p=dropout_rate)
+        self.dropout = nn.Dropout(p=self.dropout_rate)
         self.relu = nn.ReLU()
 
     def forward(self, x):
@@ -93,7 +95,7 @@ class Model(nn.Module, ConfigYAML):
         x = self.layer5(x)
         return x
 
-    def train_model(self, train_loader, val_loader) -> None:
+    def train_model(self, train_loader, val_loader, save: bool =True) -> None:
         """
         Trains and saves the model
 
@@ -108,14 +110,14 @@ class Model(nn.Module, ConfigYAML):
         --------
             None
         """
-        criterion = nn.MSELoss()
-        optimizer = optim.Adam(self.parameters(), lr=self.config_data["modelParams"]["lr"])
+        optimizer = optim.Adam(self.parameters(), lr=self.lr)
         epochs = self.config_data["modelParams"]["epochs"]
+        criterion = nn.MSELoss()
 
         input_example = np.random.randn(1, self.layer1.in_features).astype(np.float32)
         # Start MLflow experiment
         with mlflow.start_run():
-            mlflow.log_param("learning_rate", self.config_data["modelParams"]["lr"])
+            mlflow.log_param("learning_rate", self.lr)
             mlflow.log_param("epochs", epochs)
             mlflow.log_param("dropout_rate", self.dropout.p)
 
@@ -149,11 +151,15 @@ class Model(nn.Module, ConfigYAML):
                 mlflow.log_metric("validation_r2", r2, step=epoch + 1)
 
             # Save model
-            model_name = str(self.config_data['Dataset']['name']).split('.', maxsplit=1)[0]
-            model_path = f"{ConfigPaths().folder_model()}/{model_name}.pth"
-            torch.save(self.state_dict(), model_path)
-            mlflow.log_artifact(model_path, artifact_path="models")
-            pytorch.log_model(self, "pytorch-model", input_example=input_example)
+            if save:
+                model_name = str(self.config_data['Dataset']['name']).split('.', maxsplit=1)[0]
+                model_path = f"{ConfigPaths().folder_model()}/{model_name}.pth"
+                torch.save(self.state_dict(), model_path)
+                mlflow.log_artifact(model_path, artifact_path="models")
+                pytorch.log_model(self, "pytorch-model", input_example=input_example)
+                print("Saved model!")
+
+            return val_loss, r2
 
     def evaluate(self, val_loader, criterion=nn.MSELoss()) -> list:
         """
@@ -266,6 +272,45 @@ class Model(nn.Module, ConfigYAML):
         ss_residual = np.sum((y_true - y_pred) ** 2)
         r2: float = 1 - (ss_residual / ss_total)
         return r2
+
+# Objective function for optuna
+def objective(trial, train_loader, val_loader) -> float:
+    """ 
+    Objective function for optunas hyperparamet optimization
+
+    Parameters:
+    -----------
+        trial -> Needed for optuna (automatic)
+        train_loader
+            -> Training DataLoader
+        val_loader
+            -> Validation DataLoader
+
+    Returns:
+    --------
+        float
+            -> Loss of the model
+    """
+    config_params = ConfigYAML().config_data
+    input_size = config_params["modelParams"]["input_size"]
+    output_size = config_params["modelParams"]["output_size"]
+
+    # Hyperparams to tune
+    hidden_size = trial.suggest_int("hidden_size", 32, 256, step=32)
+    dropout_rate = trial.suggest_float("dropout_rate", 0.1, 0.8)
+    learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True)
+
+    # Create model
+    model = Model(input_size, hidden_size, output_size)
+    model.lr = learning_rate
+    model.dropout_rate = dropout_rate
+
+    # Returns loss and r2
+    loss, _ = model.train_model(
+        train_loader=train_loader,
+        val_loader=val_loader,
+        save=False)
+    return loss
 
 
 if __name__ == "__main__":

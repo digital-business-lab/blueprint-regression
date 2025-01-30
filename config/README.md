@@ -47,6 +47,14 @@ The current config.yaml holds standard values that are set for a overall good an
 ### Visualization
 ---
 **visBool** : If True the prediction and ground truth of your dataset will be plotted to see differences
+
 **visFormat** : Format in which you want to save your plot. Can be png, svg, pdf, ...
+
 **visMaxSteps** : If your dataset is very large and you plot both prediction and ground truth you just get a big block because there are to many datapoints. With this Parameter you can reduce the points you want to plot. If the parameter is set to **null** all the datapoints will be plotted.
+
+### HyperParamTuning
+---
+**hypTuning** : Bool if you want to tune your parameters. Only works if training mode is enabled.
+
+**hypNumTrials** : Number of trials you want to train.
 
