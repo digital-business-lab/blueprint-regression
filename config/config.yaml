@@ -21,7 +21,7 @@ Preprocessing:
   - Daily Summary
   catColsProcessor: constant
 model:
-  modelName: None
+  modelName: null
   modelMode: train
 modelParams:
   input_size: 249
@@ -31,3 +31,7 @@ modelParams:
   batch_size: 8
   lr: 0.0001
   dropout_rate: 0.3
+Visualization:
+  visBool: true
+  visFormat: png
+  visMaxSteps: 100

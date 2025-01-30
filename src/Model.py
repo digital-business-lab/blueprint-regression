@@ -10,6 +10,7 @@ from mlflow import pytorch
 import torch
 from torch import nn
 from torch import optim
+import matplotlib.pyplot as plt
 
 from src.Config import ConfigYAML, ConfigPaths
 
@@ -193,6 +194,30 @@ class Model(nn.Module, ConfigYAML):
         # Convert all predictions and targets to numpy arrays
         all_predictions = np.concatenate(all_predictions, axis=0)
         all_targets = np.concatenate(all_targets, axis=0)
+
+        if self.config_data["Visualization"]["visBool"]:
+            plt.figure(figsize=(12, 8))
+            plt.title("Comparison between Prediction and GroundTruth")
+            plt.grid(True)
+            plt.xlabel("Datapoints")
+            plt.ylabel(self.config_data["Dataset"]["target_column"])
+
+            # Visualize lines
+            max_steps = self.config_data["Visualization"]["visMaxSteps"]
+            if max_steps is None:
+                step = 1
+            else:
+                step: int = max(1, len(all_predictions) // int(max_steps))
+            plt.plot(all_predictions[::step], color="blue", label="Prediction", alpha=0.7)
+            plt.plot(all_targets[::step], color="orange", label="GroundTruth", alpha=0.7)
+
+            plt.legend()
+            format_vis = self.config_data["Visualization"]["visFormat"]
+            plt.savefig(
+                f"./model/plots/evaluate_{str(
+                    self.config_data['Dataset']['name']
+                    ).split('.', maxsplit=1)[0]}.{format_vis}",
+                    format=format_vis)
 
         # Calculate Mean Squared Error (MSE)
         avg_loss = val_loss / len(val_loader)

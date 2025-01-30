@@ -75,20 +75,20 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
         Any
     """
     dataloaders = load_dataset()
-    input_size = Dataset().config_data["modelParams"]["input_size"]
+    dataset = Dataset()
 
     # Choose model
-    if model_name == "None":
+    if model_name is None:
         model = Model(
-            input_size,
-            config.config_data["modelParams"]["hidden_size"],
-            config.config_data["modelParams"]["output_size"]
+            dataset.config_data["modelParams"]["input_size"],
+            dataset.config_data["modelParams"]["hidden_size"],
+            dataset.config_data["modelParams"]["output_size"]
         )
     else:
         model = Model(
-            input_size,
-            config.config_data["modelParams"]["hidden_size"],
-            config.config_data["modelParams"]["output_size"]
+            dataset.config_data["modelParams"]["input_size"],
+            dataset.config_data["modelParams"]["hidden_size"],
+            dataset.config_data["modelParams"]["output_size"]
         )
 
         print("Loading model dict state")
