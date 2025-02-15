@@ -7,6 +7,7 @@ File is written in pylint standard.
 
 @author Lukas Graf
 """
+import logging
 from functools import partial
 
 import optuna
@@ -16,6 +17,13 @@ import pandas as pd
 from src.Dataset import Dataset
 from src.Model import Model, objective
 from src.Config import ConfigPaths, ConfigYAML
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    filename="logs.log",
+    format='%(levelname)s : %(name)s : %(asctime)s -> %(message)s <- %(filename)s : %(funcName)s',
+    level=logging.INFO
+)
 
 
 def load_dataset() -> dict:
@@ -54,6 +62,7 @@ def load_dataset() -> dict:
         "data_val" : dataset.prepare_dataloaders(X_val, y_val, shuffle=False),
         "data_test" : dataset.prepare_dataloaders(X_test, y_test, shuffle=False)
     }
+    logger.info("Prepared dataloaders.")
 
     return dataloaders
 
@@ -79,6 +88,7 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
     --------
         Any
     """
+    logger.info("Set model mode to: '%s'", mode)
     dataloaders = load_dataset()
     dataset = Dataset()
 
@@ -102,9 +112,9 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
         ConfigYAML.write_yaml(dataset.config_data)
 
     elif hyp_tuning and mode!="train":
-        raise ValueError(
-            "If you want to do hyperparameter optimization you have to set modelMode to train!"
-            )
+        e = "If you want to do hyperparameter optimization you have to set modelMode to train!"
+        logger.error(e)
+        raise ValueError(e)
 
     # Choose model
     if model_name is None:
@@ -120,7 +130,7 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
             dataset.config_data["modelParams"]["output_size"]
         )
 
-        print("Loading model dict state")
+        logger.info("Loading model dict state")
         model.load_state_dict(torch.load(
             f"{ConfigPaths().folder_model()}/{model_name}",
             weights_only=True
@@ -152,9 +162,9 @@ def model_mode_output(model_name: str, mode: str, X: pd.DataFrame =None):
         results = model.predict(X)
 
     else:
-        results = ValueError(
-            "Wrong input! Select 'train', 'evaluate', 'predict' or 'train_predict'!"
-            )
+        e = "Wrong input! Select 'train', 'evaluate', 'predict' or 'train_predict'!"
+        logger.error(e)
+        results = ValueError(e)
 
     return results
 

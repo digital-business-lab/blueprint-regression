@@ -5,6 +5,7 @@ File is written in pylint standard
 """
 
 import os
+import logging
 
 import yaml
 
@@ -30,6 +31,7 @@ class ConfigPaths:
             Checks if the path exists
     """
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.defaultpaths = os.listdir()
 
     def folder_config(self) -> str:
@@ -101,7 +103,7 @@ class ConfigPaths:
 
         return: str
         """
-        return path if os.path.exists(path) else print("Path does not exist.")
+        return path if os.path.exists(path) else self.logger.error("Path does not exist.")
 
 
 class ConfigYAML:

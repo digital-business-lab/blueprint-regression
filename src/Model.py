@@ -4,6 +4,8 @@ File is written in pylint standard.
 
 @author Lukas Graf
 """
+import logging
+
 import numpy as np
 import mlflow
 from mlflow import pytorch
@@ -48,6 +50,9 @@ class Model(nn.Module, ConfigYAML):
                  output_size: int):
         ConfigYAML.__init__(self)
         nn.Module.__init__(self)
+        # Initialize logger
+        self.logger = logging.getLogger(__name__)
+
         self.lr = self.config_data["modelParams"]["lr"]
         self.dropout_rate = self.config_data["modelParams"]["dropout_rate"]
 
@@ -67,6 +72,8 @@ class Model(nn.Module, ConfigYAML):
 
         self.dropout = nn.Dropout(p=self.dropout_rate)
         self.relu = nn.ReLU()
+
+        self.logger.info("Initialized Model layers.")
 
     def forward(self, x):
         """
@@ -110,6 +117,7 @@ class Model(nn.Module, ConfigYAML):
         --------
             None
         """
+        self.logger.info("Started model training.")
         optimizer = optim.Adam(self.parameters(), lr=self.lr)
         epochs = self.config_data["modelParams"]["epochs"]
         criterion = nn.MSELoss()
@@ -140,13 +148,15 @@ class Model(nn.Module, ConfigYAML):
                     running_loss += loss.item()
 
                 train_loss = running_loss / len(train_loader)
-                print(f"Epoch [{epoch+1}/{epochs}], Training Loss: {train_loss:.4f}")
+                self.logger.info(
+                    "Epoch [%d / %d], Training loss: %.4f", epoch+1, epochs, train_loss
+                    )
                 mlflow.log_metric("training_loss", train_loss, step=epoch + 1)
 
                 # Validation
                 val_loss, r2 = self.evaluate(val_loader=val_loader, criterion=criterion)
-                print(f"Validation Loss after epoch {epoch+1}: {val_loss:.4f}")
-                print(f"Validation R² after epoch {epoch+1}: {r2:.4f}")
+                self.logger.info("Validation loss after epoch %d: %.4f", epoch + 1, val_loss)
+                self.logger.info("Validation R2 after epoch %d: %.4f", epoch+1, r2)
                 mlflow.log_metric("validation_loss", val_loss, step=epoch + 1)
                 mlflow.log_metric("validation_r2", r2, step=epoch + 1)
 
@@ -157,8 +167,9 @@ class Model(nn.Module, ConfigYAML):
                 torch.save(self.state_dict(), model_path)
                 mlflow.log_artifact(model_path, artifact_path="models")
                 pytorch.log_model(self, "pytorch-model", input_example=input_example)
-                print("Saved model!")
+                self.logger.info("Saved model.")
 
+            self.logger.info("Finished model training.")
             return val_loss, r2
 
     def evaluate(self, val_loader, criterion=nn.MSELoss()) -> list:
@@ -176,7 +187,8 @@ class Model(nn.Module, ConfigYAML):
         --------
             list
         """
-        self.eval()  # Set model to evaluation mode
+        self.eval()
+        self.logger.info("Set model to evaluation mode.")
         val_loss = 0.0
         all_predictions = []
         all_targets = []
@@ -225,6 +237,8 @@ class Model(nn.Module, ConfigYAML):
                     ).split('.', maxsplit=1)[0]}.{format_vis}",
                     format=format_vis)
 
+            self.logger.info("Visualization of evaluation was saved.")
+
         # Calculate Mean Squared Error (MSE)
         avg_loss = val_loss / len(val_loader)
 
@@ -243,6 +257,7 @@ class Model(nn.Module, ConfigYAML):
                 -> Dataset on which predictions should be made
         """
         self.eval()
+        self.logger.info("Set model to evaluation mode.")
         with torch.no_grad():
             predictions = self(X)
 

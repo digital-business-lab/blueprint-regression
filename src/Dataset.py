@@ -5,6 +5,8 @@ File is written in pylint standard.
 
 @author Lukas Graf
 """
+import logging
+
 import torch
 import chardet
 import pandas as pd
@@ -23,6 +25,7 @@ class Dataset(ConfigYAML):
     def __init__(self):
         super().__init__()
         self.column_transformer = None
+        self.logger = logging.getLogger(__name__)
 
     def read_dataset(self, file_path: str):
         """
@@ -30,6 +33,7 @@ class Dataset(ConfigYAML):
         """
         encoding = self.__get_encoding(file_path=file_path)
         data = pd.read_csv(file_path, encoding=encoding)
+        self.logger.info("Read dataset with encoding: %s", encoding)
         return data
 
     def split_dataset(self, data: pd.DataFrame, target_variable: str, train_size: float):
@@ -46,7 +50,9 @@ class Dataset(ConfigYAML):
                 -> Train size (Test size = 1 - Train size)
         """
         if train_size >= 1:
-            return ValueError("Size of trainingdata can not be bigger than the whole dataset!")
+            e = "Size of trainingdata can not be bigger than the whole dataset!"
+            self.logger.error(e)
+            return ValueError(e)
 
         y = data[target_variable]
         X = data.drop(target_variable, axis=1)
@@ -62,7 +68,7 @@ class Dataset(ConfigYAML):
         X_val, X_test, y_val, y_test = train_test_split(
             X_temp, y_temp, test_size=0.5, random_state=42
             )
-
+        self.logger.info("Successfully split dataset into train, val and test.")
         return X_train, X_val, X_test, y_train, y_val, y_test
 
     def preprocess_dataset(self, X, mode: str):
@@ -85,7 +91,9 @@ class Dataset(ConfigYAML):
         """
         # Validate mode
         if mode not in ["train", "test"]:
-            raise ValueError("Mode must be 'train' or 'test'!")
+            e = "Mode must be 'train' or 'test'!"
+            self.logger.error(e)
+            raise ValueError(e)
 
         # Variables for dropping columns
         drop_columns: list = self.config_data["Preprocessing"]["dropColumns"]
@@ -113,6 +121,7 @@ class Dataset(ConfigYAML):
 
         # Initialize ColumnTransformer (only on training)
         if mode == "train":
+            self.logger.info("ColumnTransformer set to train.")
             self.column_transformer = ColumnTransformer([
                 ("preprocess_num", pipe_preprocessing_num, cols_imp_num),
                 ("preprocess_cat", pipe_preprocessing_cat, cols_imp_cat)
@@ -121,13 +130,14 @@ class Dataset(ConfigYAML):
             X = self.column_transformer.fit_transform(X)
 
         elif mode == "test":
+            self.logger.info("ColumnTransformer set to test")
             if not self.column_transformer:
-                raise ValueError(
-                    "Transformer has not been fitted. Please preprocess training data first."
-                    )
+                e = "Transformer has not been fitted. Please preprocess training data first."
+                self.logger.error(e)
+                raise ValueError(e)
             X = self.column_transformer.transform(X)
 
-        print("Preprocessing was successfully!")
+        self.logger.info("Preprocessing was successfully!")
         return X
 
     def prepare_dataloaders(self, X: pd.DataFrame, y: pd.DataFrame, shuffle: bool) -> DataLoader:
